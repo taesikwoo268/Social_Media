@@ -1,0 +1,12 @@
+{
+  "name": "@circle/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target browser",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": { "bun-types": "^1.4.3", "typescript": "^5.9.3" }
+}

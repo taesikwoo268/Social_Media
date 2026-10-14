@@ -1,0 +1,22 @@
+{
+  "name": "circle-social",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun --filter '*' dev",
+    "dev:api": "bun --filter @circle/api dev",
+    "dev:web": "bun --filter @circle/web dev",
+    "build": "bun --filter @circle/shared build && bun --filter @circle/api build && bun --filter @circle/web build",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css,html}\" \"packages/**/*.ts\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,css,html}\" \"packages/**/*.ts\"",
+    "typecheck": "bun --filter '*' typecheck",
+    "test": "bun --filter '*' test",
+    "db:generate": "bun --filter @circle/api db:generate",
+    "db:migrate": "bun --filter @circle/api db:migrate",
+    "db:seed": "bun --filter @circle/api db:seed"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}
