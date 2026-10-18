@@ -1,4 +1,6 @@
 import { Elysia } from "elysia";
+
+// Compose the application outside Vercel's reserved entrypoint filenames.
 import { cors } from "@elysiajs/cors";
 import { ApiException } from "./errors";
 import { isAllowedOrigin } from "./shared/http";
