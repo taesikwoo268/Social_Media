@@ -20,6 +20,7 @@ export const NOTIFICATION_TYPES = [
   "comment",
   "reply",
 ] as const;
+export const CONVERSATION_TYPES = ["direct"] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
@@ -28,6 +29,7 @@ export type PostVisibility = (typeof POST_VISIBILITIES)[number];
 export type PostModerationStatus = (typeof POST_MODERATION_STATUSES)[number];
 export type MediaPurpose = (typeof MEDIA_PURPOSES)[number];
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+export type ConversationType = (typeof CONVERSATION_TYPES)[number];
 
 export interface ApiError {
   code: string;
@@ -46,6 +48,34 @@ export interface SessionUser {
   role: UserRole;
   status: AccountStatus;
   avatarUrl: string | null;
+}
+
+export interface ChatUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  sequence: number;
+  conversationId: string;
+  content: string;
+  sender: ChatUser;
+  replyToId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  mine: boolean;
+}
+
+export interface ConversationSummary {
+  id: string;
+  participant: ChatUser;
+  lastMessage: ChatMessage | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
 }
 
 export const MEDIA_LIMITS = {

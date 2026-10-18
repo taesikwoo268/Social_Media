@@ -25,6 +25,7 @@ import {
   Users,
   Settings,
   Globe,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { SessionUser } from "@circle/shared";
@@ -42,6 +43,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
+import { ChatPage } from "./pages/ChatPage";
 
 type AuthValue = { user: SessionUser; refresh: () => Promise<unknown> };
 const AuthContext = createContext<AuthValue | null>(null);
@@ -90,6 +92,7 @@ const nav = [
   { to: "/", label: "Bảng tin", icon: Home },
   { to: "/search", label: "Khám phá", icon: Search },
   { to: "/friends", label: "Bạn bè", icon: Users },
+  { to: "/messages", label: "Tin nhắn", icon: MessageCircle },
   { to: "/notifications", label: "Thông báo", icon: Bell },
 ];
 
@@ -100,6 +103,11 @@ function Shell({ user, refresh }: AuthValue) {
     queryKey: ["notifications"],
     queryFn: () => api<any>("/notifications"),
     refetchInterval: 30_000,
+  });
+  const { data: chats } = useQuery({
+    queryKey: ["conversations"],
+    queryFn: () => api<any>("/conversations"),
+    refetchInterval: 5_000,
   });
 
   const logout = useMutation({
@@ -161,6 +169,11 @@ function Shell({ user, refresh }: AuthValue) {
                     {note.unreadCount}
                   </b>
                 )}
+                {label === "Tin nhắn" && chats?.unreadCount > 0 && (
+                  <b className="ml-auto rounded-full bg-coral px-2 py-0.5 text-[10px] text-white">
+                    {chats.unreadCount}
+                  </b>
+                )}
               </NavLink>
             ))}
           </nav>
@@ -208,6 +221,14 @@ function Shell({ user, refresh }: AuthValue) {
             <Route
               path="/notifications"
               element={<NotificationsPage />}
+            />
+            <Route
+              path="/messages"
+              element={<ChatPage />}
+            />
+            <Route
+              path="/messages/:conversationId"
+              element={<ChatPage />}
             />
             <Route
               path="/u/:username"
@@ -262,12 +283,12 @@ function Shell({ user, refresh }: AuthValue) {
         </aside>
         <nav
           className={cn(
-            "fixed inset-x-3 bottom-3 z-50 flex h-16 items-center",
-            "justify-around rounded-2xl border border-line bg-card/95",
+            "fixed inset-x-3 bottom-3 z-50 grid h-16 grid-cols-6 items-center",
+            "rounded-2xl border border-line bg-card/95",
             "px-2 shadow-xl backdrop-blur lg:hidden",
           )}
         >
-          {links.slice(0, 4).map(({ to, label, icon: Icon }) => (
+          {links.slice(0, 5).map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -275,7 +296,7 @@ function Shell({ user, refresh }: AuthValue) {
               aria-label={label}
               className={({ isActive }) =>
                 cn(
-                  "relative grid h-11 w-14 place-items-center rounded-xl text-muted-foreground",
+                  "relative grid h-11 w-full place-items-center rounded-xl text-muted-foreground",
                   isActive && "bg-sage/10 text-sage-dark",
                 )
               }
@@ -289,9 +310,21 @@ function Shell({ user, refresh }: AuthValue) {
                   )}
                 />
               )}
+              {label === "Tin nhắn" && chats?.unreadCount > 0 && (
+                <i
+                  className={cn(
+                    "absolute right-2 top-1 h-2.5 w-2.5 rounded-full",
+                    "border-2 border-card bg-coral",
+                  )}
+                />
+              )}
             </NavLink>
           ))}
-          <NavLink to={`/u/${user.username}`}>
+          <NavLink
+            to={`/u/${user.username}`}
+            className="grid place-items-center"
+            aria-label="Hồ sơ"
+          >
             <Avatar
               src={user.avatarUrl ? `/api${user.avatarUrl}` : null}
               name={user.displayName}

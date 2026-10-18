@@ -1,5 +1,7 @@
 import {
   bigint,
+  bigserial,
+  check,
   customType,
   foreignKey,
   index,
@@ -12,6 +14,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
@@ -43,6 +46,7 @@ export const notificationType = pgEnum("notification_type", [
   "comment",
   "reply",
 ]);
+export const conversationType = pgEnum("conversation_type", ["direct"]);
 
 export const users = pgTable(
   "users",
@@ -276,5 +280,141 @@ export const notifications = pgTable(
   },
   (t) => [
     index("notifications_user_read_idx").on(t.userId, t.readAt, t.createdAt),
+  ],
+);
+
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    type: conversationType("type").notNull().default("direct"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+  },
+  (t) => [index("conversations_last_message_idx").on(t.lastMessageAt, t.id)],
+);
+
+export const conversationMembers = pgTable(
+  "conversation_members",
+  {
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastReadSequence: bigint("last_read_sequence", { mode: "number" })
+      .notNull()
+      .default(0),
+    mutedAt: timestamp("muted_at", { withTimezone: true }),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.conversationId, t.userId] }),
+    index("conversation_members_user_idx").on(t.userId, t.conversationId),
+    check(
+      "conversation_members_read_sequence_check",
+      sql`${t.lastReadSequence} >= 0`,
+    ),
+  ],
+);
+
+export const directConversations = pgTable(
+  "direct_conversations",
+  {
+    conversationId: uuid("conversation_id")
+      .primaryKey()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    userLowId: uuid("user_low_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    userHighId: uuid("user_high_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("direct_conversations_pair_uidx").on(t.userLowId, t.userHighId),
+    check(
+      "direct_conversations_order_check",
+      sql`${t.userLowId} < ${t.userHighId}`,
+    ),
+    foreignKey({
+      columns: [t.conversationId, t.userLowId],
+      foreignColumns: [
+        conversationMembers.conversationId,
+        conversationMembers.userId,
+      ],
+      name: "direct_conversations_low_member_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.conversationId, t.userHighId],
+      foreignColumns: [
+        conversationMembers.conversationId,
+        conversationMembers.userId,
+      ],
+      name: "direct_conversations_high_member_fk",
+    }).onDelete("cascade"),
+  ],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sequence: bigserial("sequence", { mode: "number" }).notNull(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientMessageId: uuid("client_message_id").notNull(),
+    replyToId: uuid("reply_to_id"),
+    content: varchar("content", { length: 4000 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("messages_sequence_uidx").on(t.sequence),
+    uniqueIndex("messages_sender_client_uidx").on(
+      t.senderId,
+      t.clientMessageId,
+    ),
+    uniqueIndex("messages_id_conversation_uidx").on(t.id, t.conversationId),
+    index("messages_conversation_sequence_idx").on(
+      t.conversationId,
+      t.sequence,
+    ),
+    index("messages_reply_idx").on(t.replyToId),
+    check(
+      "messages_content_check",
+      sql`${t.deletedAt} is not null or length(btrim(${t.content})) > 0`,
+    ),
+    foreignKey({
+      columns: [t.conversationId, t.senderId],
+      foreignColumns: [
+        conversationMembers.conversationId,
+        conversationMembers.userId,
+      ],
+      name: "messages_sender_member_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.replyToId, t.conversationId],
+      foreignColumns: [t.id, t.conversationId],
+      name: "messages_reply_conversation_fk",
+    }),
   ],
 );

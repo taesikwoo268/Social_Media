@@ -60,4 +60,3 @@ Mọi input từ body, params và query được kiểm tra bằng Zod qua
 `shared/validation.ts`. `shared/http.ts` chỉ chứa cấu hình HTTP và cookie;
 quyền truy cập cùng logic tạo thông báo nằm trong module tương ứng. JWT và
 database được giữ tách biệt ở cấp `src`.
-# Social_Media

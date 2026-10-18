@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   UserPlus,
   UserCheck,
   Clock,
   Image as ImageIcon,
   Settings,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, assetUrl } from "../api";
@@ -20,6 +21,7 @@ import { PostCard, type Post } from "./FeedPage";
 export function ProfilePage() {
   const { username = "" } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const client = useQueryClient();
   const profile = useQuery({
     queryKey: ["profile", username],
@@ -40,6 +42,15 @@ export function ProfilePage() {
       toast.success("Đã gửi lời mời");
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+  const startChat = useMutation({
+    mutationFn: () =>
+      api<{ id: string }>("/conversations/direct", {
+        method: "POST",
+        body: JSON.stringify({ userId: profile.data.id }),
+      }),
+    onSuccess: (conversation) => navigate(`/messages/${conversation.id}`),
+    onError: (error: Error) => toast.error(error.message),
   });
   if (profile.isPending)
     return (
@@ -89,10 +100,19 @@ export function ProfilePage() {
                   Kết bạn
                 </Button>
               ) : p.relationship === "friends" ? (
-                <Button variant="outline">
-                  <UserCheck size={17} />
-                  Bạn bè
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    disabled={startChat.isPending}
+                    onClick={() => startChat.mutate()}
+                  >
+                    <MessageCircle size={17} />
+                    <span className="hidden sm:inline">Nhắn tin</span>
+                  </Button>
+                  <Button variant="outline">
+                    <UserCheck size={17} />
+                    <span className="hidden sm:inline">Bạn bè</span>
+                  </Button>
+                </div>
               ) : (
                 <Button
                   variant="outline"

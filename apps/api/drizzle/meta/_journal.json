@@ -15,6 +15,13 @@
       "when": 1791794735779,
       "tag": "0001_yummy_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792133145136,
+      "tag": "0002_melodic_giant_girl",
+      "breakpoints": true
     }
   ]
 }

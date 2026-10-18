@@ -10,6 +10,8 @@ import { commentsRoutes } from "./modules/comments/comments.routes";
 import { notificationsRoutes } from "./modules/notifications/notifications.routes";
 import { mediaRoutes } from "./modules/media/media.routes";
 import { adminRoutes } from "./modules/admin/admin.routes";
+import { conversationsRoutes } from "./modules/conversations/conversations.routes";
+import { messagesRoutes } from "./modules/messages/messages.routes";
 
 export const app = new Elysia()
   .use(
@@ -54,6 +56,8 @@ export const app = new Elysia()
   .use(commentsRoutes)
   .use(notificationsRoutes)
   .use(mediaRoutes)
+  .use(conversationsRoutes)
+  .use(messagesRoutes)
   .use(adminRoutes);
 
 export type App = typeof app;
