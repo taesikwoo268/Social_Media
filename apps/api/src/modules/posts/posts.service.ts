@@ -129,13 +129,14 @@ export const postsService = {
       decodeCursor(query.cursor),
     );
     const page = rows.slice(0, 10);
+    const lastPost = page[page.length - 1];
     return {
       items: await Promise.all(
         page.map((post) => serializePost(post, viewer.id)),
       ),
       nextCursor:
-        rows.length > 10 && page.at(-1)
-          ? encodeCursor(page.at(-1)!.createdAt, page.at(-1)!.id)
+        rows.length > 10 && lastPost
+          ? encodeCursor(lastPost.createdAt, lastPost.id)
           : null,
     };
   },

@@ -254,7 +254,7 @@ function Shell({ user, refresh }: AuthValue) {
           <div className="sticky top-7">
             <Card className="p-5">
               <h2 className="mt-2 font-display text-xl font-semibold">
-                Chào {user.displayName.split(" ").at(-1)}
+                Chào {user.displayName.split(" ").slice(-1)[0]}
               </h2>
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <NavLink

@@ -122,7 +122,7 @@ export function ChatPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const latest = allMessages.at(-1);
+  const latest = allMessages[allMessages.length - 1];
   useEffect(() => {
     if (!conversationId || !latest || markedMessageRef.current === latest.id)
       return;

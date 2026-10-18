@@ -59,7 +59,7 @@ export const messagesService = {
     );
     const hasMore = rows.length > query.limit;
     const page = rows.slice(0, query.limit);
-    const oldest = page.at(-1);
+    const oldest = page[page.length - 1];
     return {
       items: [...page].reverse().map((row) => serialize(row, viewerId)),
       nextCursor: hasMore && oldest ? String(oldest.sequence) : null,

@@ -89,7 +89,7 @@ function Composer() {
           className="min-h-24 border-0 bg-sand/60 text-base focus:ring-sage/10"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={`Bạn đang nghĩ gì, ${user.displayName.split(" ").at(-1)}?`}
+          placeholder={`Bạn đang nghĩ gì, ${user.displayName.split(" ").slice(-1)[0]}?`}
           maxLength={5000}
         />
       </div>
