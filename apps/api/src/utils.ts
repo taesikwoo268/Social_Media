@@ -1,10 +1,18 @@
 import { createHash } from "node:crypto";
-import {
-  ALLOWED_IMAGE_TYPES,
-  MEDIA_LIMITS,
-  type MediaPurpose,
-} from "@circle/shared";
+import type { MediaPurpose } from "@circle/shared";
 import { badRequest } from "./errors";
+
+const MEDIA_LIMITS: Record<MediaPurpose, number> = {
+  avatar: 5_242_880,
+  cover: 10_485_760,
+  post: 5_242_880,
+};
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
 
 export const normalizePair = (a: string, b: string) =>
   a < b ? ([a, b] as const) : ([b, a] as const);
@@ -45,3 +53,19 @@ export async function parseImage(file: File, purpose: MediaPurpose) {
 }
 
 export const mediaUrl = (id: string | null) => (id ? `/media/${id}` : null);
+
+export function encodeCursor(createdAt: string | Date, id: string) {
+  return btoa(JSON.stringify([new Date(createdAt).toISOString(), id]));
+}
+
+export function decodeCursor(cursor?: string | null): [Date, string] | null {
+  if (!cursor) return null;
+  try {
+    const [date, id] = JSON.parse(atob(cursor));
+    if (typeof date !== "string" || typeof id !== "string") return null;
+    const parsed = new Date(date);
+    return Number.isNaN(parsed.getTime()) ? null : [parsed, id];
+  } catch {
+    return null;
+  }
+}

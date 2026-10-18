@@ -1,7 +1,11 @@
-import { decodeCursor, encodeCursor } from "@circle/shared";
 import { badRequest, forbidden, notFound } from "../../errors";
 import { canViewPost } from "../../domain";
-import { mediaUrl, parseImage } from "../../utils";
+import {
+  decodeCursor,
+  encodeCursor,
+  mediaUrl,
+  parseImage,
+} from "../../utils";
 import { friendsRepository } from "../friends/friends.repository";
 import { notificationsService } from "../notifications/notifications.service";
 import { postsRepository } from "./posts.repository";

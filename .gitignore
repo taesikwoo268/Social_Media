@@ -9,4 +9,6 @@ test-results
 .bun-install
 .idea/
 *.tsbuildinfo
-
+.vercel/
+.env*
+!.env.example
