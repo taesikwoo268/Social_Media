@@ -103,7 +103,11 @@ export const messagesService = {
   },
 
   async remove(id: string, viewerId: string) {
-    await requireOwnedMessage(id, viewerId);
+    const message = await requireOwnedMessage(id, viewerId);
     await messagesRepository.softDelete(id);
+    return {
+      id: message.id,
+      conversationId: message.conversationId,
+    };
   },
 };

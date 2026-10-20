@@ -12,3 +12,6 @@ test-results
 .vercel/
 .env*
 !.env.example
+
+.vercel
+.env*

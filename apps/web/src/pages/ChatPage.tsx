@@ -30,6 +30,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useChatSocket } from "@/features/chat/use-chat-socket";
 
 type ConversationPage = Page<ConversationSummary> & { unreadCount: number };
 type MessagePage = Page<ChatMessage>;
@@ -46,14 +47,25 @@ export function ChatPage() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const client = useQueryClient();
+  const {
+    connected,
+    sendMessage,
+    updateMessage,
+    deleteMessage,
+    markRead,
+    setTyping,
+    typingConversationIds,
+  } = useChatSocket();
   const [content, setContent] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const markedMessageRef = useRef<string | null>(null);
+  const typingStopTimerRef = useRef<number | null>(null);
+  const sentTypingRef = useRef(false);
 
   const conversations = useQuery({
     queryKey: ["conversations"],
     queryFn: () => api<ConversationPage>("/conversations"),
-    refetchInterval: 5_000,
+    refetchInterval: connected ? false : 5_000,
   });
 
   const selected = useQuery({
@@ -73,7 +85,7 @@ export function ChatPage() {
       ),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: Boolean(conversationId),
-    refetchInterval: 3_000,
+    refetchInterval: connected ? false : 3_000,
   });
 
   const allMessages = useMemo(
@@ -92,13 +104,15 @@ export function ChatPage() {
 
   const send = useMutation({
     mutationFn: (text: string) =>
-      api<ChatMessage>(`/conversations/${conversationId}/messages`, {
-        method: "POST",
-        body: JSON.stringify({
-          clientMessageId: crypto.randomUUID(),
-          content: text,
-        }),
-      }),
+      connected && conversationId
+        ? sendMessage(conversationId, text)
+        : api<ChatMessage>(`/conversations/${conversationId}/messages`, {
+            method: "POST",
+            body: JSON.stringify({
+              clientMessageId: crypto.randomUUID(),
+              content: text,
+            }),
+          }).then(() => undefined),
     onSuccess: () => {
       setContent("");
       refreshChat();
@@ -108,42 +122,98 @@ export function ChatPage() {
 
   const edit = useMutation({
     mutationFn: ({ id, content }: { id: string; content: string }) =>
-      api<ChatMessage>(`/messages/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ content }),
-      }),
+      connected
+        ? updateMessage(id, content)
+        : api<ChatMessage>(`/messages/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ content }),
+          }).then(() => undefined),
     onSuccess: refreshChat,
     onError: (error: Error) => toast.error(error.message),
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => api(`/messages/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      connected
+        ? deleteMessage(id)
+        : api(`/messages/${id}`, { method: "DELETE" }),
     onSuccess: refreshChat,
     onError: (error: Error) => toast.error(error.message),
   });
 
   const latest = allMessages[allMessages.length - 1];
+  const participantIsTyping = conversationId
+    ? typingConversationIds.has(conversationId)
+    : false;
   useEffect(() => {
     if (!conversationId || !latest || markedMessageRef.current === latest.id)
       return;
     markedMessageRef.current = latest.id;
-    api(`/conversations/${conversationId}/read`, {
-      method: "POST",
-      body: JSON.stringify({ messageId: latest.id }),
-    })
+    const request = connected
+      ? markRead(conversationId, latest.id)
+      : api(`/conversations/${conversationId}/read`, {
+          method: "POST",
+          body: JSON.stringify({ messageId: latest.id }),
+        });
+    request
       .then(() => client.invalidateQueries({ queryKey: ["conversations"] }))
       .catch(() => {
         markedMessageRef.current = null;
       });
-  }, [client, conversationId, latest]);
+  }, [client, connected, conversationId, latest, markRead]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [latest?.id]);
 
+  useEffect(() => {
+    return () => {
+      if (typingStopTimerRef.current) {
+        window.clearTimeout(typingStopTimerRef.current);
+      }
+      if (conversationId && sentTypingRef.current) {
+        setTyping(conversationId, false);
+      }
+      sentTypingRef.current = false;
+    };
+  }, [conversationId, setTyping]);
+
+  const changeContent = (value: string) => {
+    setContent(value);
+    if (!conversationId || !connected) return;
+
+    if (!value.trim()) {
+      if (sentTypingRef.current) setTyping(conversationId, false);
+      sentTypingRef.current = false;
+      if (typingStopTimerRef.current) {
+        window.clearTimeout(typingStopTimerRef.current);
+      }
+      return;
+    }
+
+    if (!sentTypingRef.current) {
+      sentTypingRef.current = true;
+      setTyping(conversationId, true);
+    }
+
+    if (typingStopTimerRef.current) {
+      window.clearTimeout(typingStopTimerRef.current);
+    }
+    typingStopTimerRef.current = window.setTimeout(() => {
+      if (sentTypingRef.current) setTyping(conversationId, false);
+      sentTypingRef.current = false;
+    }, 1_500);
+  };
+
   const submit = () => {
     const text = content.trim();
-    if (text && !send.isPending) send.mutate(text);
+    if (text && !send.isPending) {
+      if (conversationId && sentTypingRef.current) {
+        setTyping(conversationId, false);
+        sentTypingRef.current = false;
+      }
+      send.mutate(text);
+    }
   };
 
   const onComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -252,8 +322,17 @@ export function ChatPage() {
                       <b className="block text-sm">
                         {selected.data.participant.displayName}
                       </b>
-                      <small className="text-muted-foreground">
-                        @{selected.data.participant.username}
+                      <small
+                        className={cn(
+                          "text-muted-foreground",
+                          participantIsTyping && "text-sage-dark",
+                        )}
+                      >
+                        {participantIsTyping
+                          ? "Đang nhập..."
+                          : connected
+                            ? `@${selected.data.participant.username}`
+                            : "Đang kết nối lại..."}
                       </small>
                     </Link>
                   </>
@@ -278,7 +357,7 @@ export function ChatPage() {
                     <Skeleton className="h-14 w-2/3" />
                     <Skeleton className="ml-auto h-14 w-1/2" />
                   </div>
-                ) : allMessages.length ? (
+                ) : allMessages.length || participantIsTyping ? (
                   <div className="space-y-2">
                     {allMessages.map((message) => (
                       <div
@@ -350,6 +429,20 @@ export function ChatPage() {
                         </div>
                       </div>
                     ))}
+                    {participantIsTyping && (
+                      <div className="flex justify-start">
+                        <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-sand px-4 py-3">
+                          <span className="sr-only">Đang nhập...</span>
+                          {[0, 1, 2].map((dot) => (
+                            <span
+                              key={dot}
+                              className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
+                              style={{ animationDelay: `${dot * 120}ms` }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div ref={bottomRef} />
                   </div>
                 ) : (
@@ -369,7 +462,7 @@ export function ChatPage() {
                     rows={1}
                     placeholder="Nhập tin nhắn..."
                     className="max-h-36 min-h-11"
-                    onChange={(event) => setContent(event.target.value)}
+                    onChange={(event) => changeContent(event.target.value)}
                     onKeyDown={onComposerKeyDown}
                   />
                   <Button

@@ -7,6 +7,7 @@ import {
   createMessageSchema,
   messageListQuerySchema,
 } from "./messages/messages.schema";
+import { socketEventSchema } from "./realtime/realtime.schema";
 
 describe("module Zod schemas", () => {
   test("normalizes auth input", () => {
@@ -50,5 +51,38 @@ describe("module Zod schemas", () => {
     expect(createMessageSchema.safeParse({ content: "   " }).success).toBe(
       false,
     );
+  });
+
+  test("validates realtime chat events", () => {
+    const requestId = crypto.randomUUID();
+    expect(
+      socketEventSchema.safeParse({ type: "ping", requestId }).success,
+    ).toBe(true);
+    expect(
+      socketEventSchema.safeParse({
+        type: "message.update",
+        requestId,
+        payload: {
+          messageId: crypto.randomUUID(),
+          content: "  Đã sửa  ",
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      socketEventSchema.safeParse({
+        type: "message.delete",
+        requestId,
+        payload: { messageId: "không-phải-uuid" },
+      }).success,
+    ).toBe(false);
+    expect(
+      socketEventSchema.safeParse({
+        type: "typing.set",
+        payload: {
+          conversationId: crypto.randomUUID(),
+          typing: true,
+        },
+      }).success,
+    ).toBe(true);
   });
 });

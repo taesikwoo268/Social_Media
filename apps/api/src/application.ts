@@ -14,6 +14,7 @@ import { mediaRoutes } from "./modules/media/media.routes";
 import { adminRoutes } from "./modules/admin/admin.routes";
 import { conversationsRoutes } from "./modules/conversations/conversations.routes";
 import { messagesRoutes } from "./modules/messages/messages.routes";
+import { realtimeRoutes } from "./modules/realtime/realtime.routes";
 
 export const app = new Elysia()
   .use(
@@ -60,6 +61,7 @@ export const app = new Elysia()
   .use(mediaRoutes)
   .use(conversationsRoutes)
   .use(messagesRoutes)
-  .use(adminRoutes);
+  .use(adminRoutes)
+  .use(realtimeRoutes);
 
 export type App = typeof app;

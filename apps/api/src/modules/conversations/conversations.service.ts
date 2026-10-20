@@ -101,5 +101,6 @@ export const conversationsService = {
     if (!message || message.conversationId !== id)
       throw badRequest("Tin nhắn không thuộc cuộc trò chuyện");
     await conversationsRepository.markRead(id, userId, message.sequence);
+    return { sequence: message.sequence };
   },
 };

@@ -104,3 +104,90 @@ export function decodeCursor(cursor?: string | null): [Date, string] | null {
     return null;
   }
 }
+
+export type RealtimeServerEvent =
+  | {
+      type: "connection.ready";
+      payload: { userId: string };
+    }
+  | {
+      type: "message.created";
+      requestId?: string;
+      payload: { conversationId: string; message: ChatMessage };
+    }
+  | {
+      type: "message.updated";
+      requestId?: string;
+      payload: { conversationId: string; message: ChatMessage };
+    }
+  | {
+      type: "message.deleted";
+      requestId?: string;
+      payload: { conversationId: string; messageId: string };
+    }
+  | {
+      type: "conversation.read";
+      requestId?: string;
+      payload: {
+        conversationId: string;
+        userId: string;
+        messageId: string;
+        sequence: number;
+      };
+    }
+  | {
+      type: "typing.changed";
+      payload: {
+        conversationId: string;
+        userId: string;
+        typing: boolean;
+      };
+    }
+  | {
+      type: "pong";
+      requestId?: string;
+      payload: { timestamp: number };
+    }
+  | {
+      type: "error";
+      requestId?: string;
+      payload: { code: string; message: string };
+    };
+
+export type RealtimeClientEvent =
+  | {
+      type: "ping";
+      requestId: string;
+    }
+  | {
+      type: "message.send";
+      requestId: string;
+      payload: {
+        conversationId: string;
+        clientMessageId: string;
+        content: string;
+        replyToId?: string;
+      };
+    }
+  | {
+      type: "message.update";
+      requestId: string;
+      payload: { messageId: string; content: string };
+    }
+  | {
+      type: "message.delete";
+      requestId: string;
+      payload: { messageId: string };
+    }
+  | {
+      type: "conversation.read";
+      requestId: string;
+      payload: { conversationId: string; messageId: string };
+    }
+  | {
+      type: "typing.set";
+      payload: {
+        conversationId: string;
+        typing: boolean;
+      };
+    };
