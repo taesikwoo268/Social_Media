@@ -1,4 +1,5 @@
 import type { RealtimeClientEvent, RealtimeServerEvent } from "@circle/shared";
+import { API_URL } from "../../api";
 
 type EventListener = (event: RealtimeServerEvent) => void;
 type StatusListener = (connected: boolean) => void;
@@ -8,6 +9,21 @@ type PendingRequest = {
   reject: (error: Error) => void;
   timeout: number;
 };
+
+export function chatSocketUrl() {
+  const configuredSocketUrl = import.meta.env.VITE_WS_URL?.trim();
+  if (configuredSocketUrl) return configuredSocketUrl.replace(/\/$/, "");
+
+  if (/^https?:\/\//i.test(API_URL)) {
+    const url = new URL(API_URL);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/ws`;
+    return url.toString();
+  }
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}${API_URL}/ws`;
+}
 
 export class ChatSocket {
   private socket: WebSocket | null = null;
@@ -32,8 +48,7 @@ export class ChatSocket {
     }
 
     this.stopped = false;
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${protocol}//${window.location.host}/api/ws`);
+    const socket = new WebSocket(chatSocketUrl());
     this.socket = socket;
 
     socket.addEventListener("open", () => {

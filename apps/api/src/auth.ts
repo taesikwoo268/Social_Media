@@ -11,12 +11,14 @@ const accessSecret = new TextEncoder().encode(
 const refreshSecret = new TextEncoder().encode(
   process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret-change-me-32-chars",
 );
-const secure = process.env.NODE_ENV === "production";
+const production = process.env.NODE_ENV === "production";
 
 export const cookieOptions = {
   httpOnly: true,
-  sameSite: "lax" as const,
-  secure,
+  // Render serves the static web and API from different origins. `none` is
+  // required so browsers include the API cookie in cross-origin fetch/WS calls.
+  sameSite: production ? ("none" as const) : ("lax" as const),
+  secure: production,
   path: "/",
 };
 

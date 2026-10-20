@@ -1,8 +1,18 @@
 import { t } from "elysia";
 import { cookieOptions } from "../auth";
 
-export const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:5173";
-export const allowedOrigins = new Set([webOrigin]);
+const configuredWebOrigins =
+  process.env.WEB_ORIGINS ?? process.env.WEB_ORIGIN ?? "http://localhost:5173";
+
+export const allowedOrigins = new Set(
+  configuredWebOrigins
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) => new URL(origin).origin),
+);
+export const webOrigin =
+  allowedOrigins.values().next().value ?? "http://localhost:5173";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 if (isDevelopment) {

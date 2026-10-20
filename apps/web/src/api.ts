@@ -1,4 +1,6 @@
-const API = "/api";
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+
+export const API_URL = (configuredApiUrl || "/api").replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(
@@ -15,7 +17,7 @@ export async function api<T>(
   options: RequestInit = {},
   retry = true,
 ): Promise<T> {
-  const response = await fetch(`${API}${path}`, {
+  const response = await fetch(`${API_URL}${path}`, {
     ...options,
     credentials: "include",
     headers:
@@ -29,7 +31,7 @@ export async function api<T>(
     path !== "/auth/refresh" &&
     path !== "/auth/login"
   ) {
-    const refreshed = await fetch(`${API}/auth/refresh`, {
+    const refreshed = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
       credentials: "include",
     });
@@ -46,7 +48,8 @@ export async function api<T>(
   return response.json();
 }
 
-export const assetUrl = (url?: string | null) => (url ? `/api${url}` : null);
+export const assetUrl = (url?: string | null) =>
+  url ? `${API_URL}${url}` : null;
 export const formatTime = (value: string) =>
   new Intl.RelativeTimeFormat("vi", { numeric: "auto" }).format(
     ...relative(new Date(value)),

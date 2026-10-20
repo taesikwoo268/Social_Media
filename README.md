@@ -32,6 +32,57 @@ bun db:generate
 
 Không có Docker, MinIO, Redis hay dịch vụ lưu trữ ngoài.
 
+## Deploy frontend và backend trên Render
+
+Backend Web Service:
+
+```text
+Root directory: (để trống, dùng thư mục gốc repository)
+Build command: bun install
+Start command: bun --filter @circle/api start
+Health check path: /health
+```
+
+Các biến môi trường backend bắt buộc:
+
+```text
+DATABASE_URL=<PostgreSQL production URL>
+JWT_ACCESS_SECRET=<chuỗi ngẫu nhiên tối thiểu 32 ký tự>
+JWT_REFRESH_SECRET=<chuỗi ngẫu nhiên khác tối thiểu 32 ký tự>
+NODE_ENV=production
+WEB_ORIGIN=https://<frontend>.onrender.com
+```
+
+Không tự đặt `PORT`; Render cung cấp biến này và API tự động sử dụng nó.
+
+Frontend Static Site:
+
+```text
+Root directory: (để trống, dùng thư mục gốc repository)
+Build command: bun install && bun --filter @circle/web build
+Publish directory: apps/web/dist
+```
+
+Trong phần Redirects/Rewrites của Static Site, thêm rewrite:
+
+```text
+Source: /*
+Destination: /index.html
+Action: Rewrite
+```
+
+Thêm hai biến build-time rồi deploy lại frontend:
+
+```text
+VITE_API_URL=https://<backend>.onrender.com
+VITE_WS_URL=wss://<backend>.onrender.com/ws
+```
+
+Frontend và backend dùng hai origin khác nhau, vì vậy production cookie được đặt
+với `SameSite=None; Secure`. `WEB_ORIGIN` phải khớp chính xác URL frontend,
+không có dấu `/` ở cuối. Nếu có nhiều frontend/preview, dùng `WEB_ORIGINS` và
+phân tách các URL bằng dấu phẩy.
+
 ## Kiến trúc backend
 
 Backend dùng composition root tại `apps/api/src/app.ts`; `index.ts` chỉ khởi động HTTP server. Mỗi domain trong `apps/api/src/modules` có cùng cấu trúc:
